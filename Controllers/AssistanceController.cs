@@ -152,7 +152,7 @@ Oinsa atu kuda liis mean ho di'ak??
                 };
 
                 // Gunakan model resmi gemini-2.5-flash-lite
-                string apiUrl = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={GeminiApiKey}";
+                string apiUrl = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={GeminiApiKey}";
 
                 var response = await _httpClient.PostAsJsonAsync(apiUrl, payload);
                 string responseBody = await response.Content.ReadAsStringAsync();
