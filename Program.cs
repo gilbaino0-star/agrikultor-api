@@ -2,7 +2,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // 1. Register Controllers & CORS
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 builder.Services.AddHttpClient();
 
 builder.Services.AddCors(options =>
@@ -20,7 +21,8 @@ var app = builder.Build();
 // 2. Configure HTTP Pipeline
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 //app.UseHttpsRedirection();
