@@ -1,0 +1,6 @@
+@MyPwaApp.Api_HostAddress = http://localhost:5086
+
+GET {{MyPwaApp.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
