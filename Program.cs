@@ -1,38 +1,37 @@
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Register Controllers & CORS
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHttpClient();
 
+// 1. Izinkan CORS untuk semua origin/Netlify/Mobile
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowBlazor", policy =>
+    options.AddPolicy("AllowAll", policy =>
     {
         policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+              .AllowAnyHeader()
+              .AllowAnyMethod();
     });
 });
 
 var app = builder.Build();
 
-// 2. Configure HTTP Pipeline
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Agrikultor Matenek API v1");
+        c.RoutePrefix = string.Empty;
+    });
 }
 
-//app.UseHttpsRedirection();
-
-// Active-kan CORS
-app.UseCors("AllowBlazor");
-
+// 2. Wajib: UseCors dipanggil SEBELUM MapControllers/UseAuthorization
+app.UseCors("AllowAll");
 app.UseAuthorization();
 
-// 3. Map Controllers (Routing ke RecommendationController)
 app.MapControllers();
 
 app.Run();

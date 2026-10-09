@@ -7,15 +7,16 @@ namespace MyPwaApi.Controllers
     [Route("api/assistance")]
     public class AssistanceController : ControllerBase
     {
-        private readonly HttpClient _httpClient;
+       private readonly HttpClient _httpClient;
+        private readonly string _geminiApiKey;
         
         // Gemini API Key dari Google AI Studio (Gratis)
-        private const string GeminiApiKey = "AQ.Ab8RN6IjxGCLqNM4nwYMKPJzNkO63v3CjOVnC5rNA0qOaVSKWA";
-
-        public AssistanceController(HttpClient httpClient)
+        public AssistanceController(HttpClient httpClient, IConfiguration config)
         {
             _httpClient = httpClient;
             _httpClient.Timeout = TimeSpan.FromSeconds(30);
+
+            _geminiApiKey = config["GEMINI_API_KEY"] ?? string.Empty;
         }
 
         [HttpPost("chat")]
@@ -152,7 +153,7 @@ Oinsa atu kuda liis mean ho di'ak??
                 };
 
                 // Gunakan model resmi gemini-2.5-flash-lite
-                string apiUrl = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={GeminiApiKey}";
+                string apiUrl = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key={_geminiApiKey}";
 
                 var response = await _httpClient.PostAsJsonAsync(apiUrl, payload);
                 string responseBody = await response.Content.ReadAsStringAsync();
