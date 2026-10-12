@@ -70,7 +70,7 @@ REGRAS LINGUÍSTIKA NO FORMATU (OBLIGATÓRIU):
 
 DADOS SENSOR NO AI-HORIS:
 - Tipo ai-horis: {request.Crop} ({request.Stage})
-- Parameter: pH = {request.Ph:F1}, Umidade = {request.Moisture:F0}%, N = {request.N:F0} mg/kg, P = {request.P:F0} mg/kg, K = {request.K:F0} mg/kg.
+- Parameter: pH = {request.Ph:F1}, Umidade = {request.Moisture:F0}%, Temperatura = {request.Temp:F1}°C, EC (Kondutividade) = {request.EC:F1} dS/m N = {request.N:F0} mg/kg, P = {request.P:F0} mg/kg, K = {request.K:F0} mg/kg.
 
 EXEMPLU RESPOSTA NE'EBÉ LOOS:
 ---
@@ -187,10 +187,11 @@ Oinsa atu kuda liis mean ho di'ak??
         public string Condition { get; set; } = "";
         public double Ph { get; set; }
         public double Moisture { get; set; }
+        public double Temp { get; set; }
+        public double EC { get; set; }
         public double N { get; set; }
         public double P { get; set; }
         public double K { get; set; }
-         public double EC { get; set; }
         public string Question { get; set; } = "";
         public string? ImageBase64 { get; set; }
     }
