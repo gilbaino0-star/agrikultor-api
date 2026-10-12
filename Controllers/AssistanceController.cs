@@ -10,7 +10,6 @@ namespace MyPwaApi.Controllers
        private readonly HttpClient _httpClient;
         private readonly string _geminiApiKey;
         
-        // Gemini API Key dari Google AI Studio (Gratis)
         public AssistanceController(HttpClient httpClient, IConfiguration config)
         {
             _httpClient = httpClient;
@@ -22,14 +21,13 @@ namespace MyPwaApi.Controllers
         [HttpPost("chat")]
         public async Task<IActionResult> ChatWithAi([FromBody] ChatRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request.Question))
+            if (string.IsNullOrWhiteSpace(request.Question) && string.IsNullOrEmpty(request.ImageBase64))
             {
                 return BadRequest(new { Answer = "Pergunta la bele mamuk." });
             }
 
             try
             {
-                // System Instruction dengan aturan bahasa Tetum murni & kamus larangan
                 string systemInstruction = $@"
 O hatán nu'udar 'Agrikultor Matenek', espesialista agrikultura iha Timor-Leste.
 
@@ -133,26 +131,27 @@ Oinsa atu kuda liis mean ho di'ak??
 4. rega be'e no kuidadu; rega be'e loron-loron iha dader no loraik, maibe keta rega to be nalihun tamba bele estraga ai abut sai dodok. hamoos duut ne'ebe moris besik lis mean hodi nunee labele supa nutrisaun husi liis mean.
 ---";
 
+                // Mendukung pengiriman gambar jika ada
+                var partsList = new List<object>();
+                if (!string.IsNullOrEmpty(request.ImageBase64))
+                {
+                    partsList.Add(new { inline_data = new { mime_type = "image/jpeg", data = request.ImageBase64 } });
+                }
+                partsList.Add(new { text = $"{systemInstruction}\n\nPergunta husi agrikultor: {request.Question}" });
+
                 var payload = new
                 {
                     contents = new[]
                     {
-                        new
-                        {
-                            parts = new[]
-                            {
-                                new { text = $"{systemInstruction}\n\nPergunta husi agrikultor: {request.Question}" }
-                            }
-                        }
+                        new { parts = partsList.ToArray() }
                     },
                     generationConfig = new
                     {
-                        temperature = 0.1, // Rendah agar tidak mengarang / berhalusinasi kata baru
+                        temperature = 0.1,
                         maxOutputTokens = 450
                     }
                 };
 
-                // Gunakan model resmi gemini-2.5-flash-lite
                 string apiUrl = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={_geminiApiKey}";
 
                 var response = await _httpClient.PostAsJsonAsync(apiUrl, payload);
@@ -160,7 +159,6 @@ Oinsa atu kuda liis mean ho di'ak??
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    Console.WriteLine($"[GEMINI ERROR]: {response.StatusCode} - {responseBody}");
                     return Ok(new { Answer = $"⚠️ Gemini API Error ({(int)response.StatusCode}): {responseBody}" });
                 }
 
@@ -169,12 +167,7 @@ Oinsa atu kuda liis mean ho di'ak??
                 
                 if (candidates.GetArrayLength() > 0)
                 {
-                    string answer = candidates[0]
-                        .GetProperty("content")
-                        .GetProperty("parts")[0]
-                        .GetProperty("text")
-                        .GetString() ?? "Deskulpa, la bele hetan resposta.";
-
+                    string answer = candidates[0].GetProperty("content").GetProperty("parts")[0].GetProperty("text").GetString() ?? "Deskulpa, la bele hetan resposta.";
                     return Ok(new { Answer = answer.Trim() });
                 }
 
@@ -198,5 +191,7 @@ Oinsa atu kuda liis mean ho di'ak??
         public double P { get; set; }
         public double K { get; set; }
         public string Question { get; set; } = "";
+        public string? ImageBase64 { get; set; }
     }
 }
+
