@@ -10,11 +10,10 @@ namespace MyPwaApi.Controllers
        private readonly HttpClient _httpClient;
         private readonly string _geminiApiKey;
         
-        // Gemini API Key dari Google AI Studio (Gratis)
         public AssistanceController(HttpClient httpClient, IConfiguration config)
         {
             _httpClient = httpClient;
-            _httpClient.Timeout = TimeSpan.FromSeconds(30);
+            _httpClient.Timeout = TimeSpan.FromSeconds(60);
 
             _geminiApiKey = config["GEMINI_API_KEY"] ?? string.Empty;
         }
@@ -22,14 +21,13 @@ namespace MyPwaApi.Controllers
         [HttpPost("chat")]
         public async Task<IActionResult> ChatWithAi([FromBody] ChatRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request.Question))
+            if (string.IsNullOrWhiteSpace(request.Question) && string.IsNullOrEmpty(request.ImageBase64))
             {
-                return BadRequest(new { Answer = "Pergunta la bele mamuk." });
+                return BadRequest(new { Answer = "Pergunta ka foto la bele mamuk." });
             }
 
             try
             {
-                // System Instruction dengan aturan bahasa Tetum murni & kamus larangan
                 string systemInstruction = $@"
 O hatán nu'udar 'Agrikultor Matenek', espesialista agrikultura iha Timor-Leste.
 
@@ -67,8 +65,8 @@ REGRAS LINGUÍSTIKA NO FORMATU (OBLIGATÓRIU):
    - LABELE HATAN 'uza lis isin ne'ebe matenek' -> MAIBE HATAN 'uza lis isin ne'be diak, saudavel, la'os ida dodok/att ona'
    - LABELE HATAN 'halo rai sai mahoben ida' -> MAIBE HATAN ' halo rai sai hiban ida'
    - KETA UZA Liafuan 'Kompostu' -> uza 'kompost'
-3. HATÁN DIREITU (TO THE POINT): Labele uza saudações/intro (Labele 'Bondia', 'Ha'u hare...', dsb.).
-4. BADAK NO KLARU: Fó kedas pasu-por-pasu ne'ebé naruk nato'on no fasil atu tuir.
+3. HATÁN DIREITU (TO THE POINT): Labele uza saudações/intro.
+4. BADAK NO KLARU: Fó kedas pasu-por-pasu ne'ebé fasil atu tuir.
 
 DADOS SENSOR NO AI-HORIS:
 - Tipo ai-horis: {request.Crop} ({request.Stage})
@@ -133,35 +131,53 @@ Oinsa atu kuda liis mean ho di'ak??
 4. rega be'e no kuidadu; rega be'e loron-loron iha dader no loraik, maibe keta rega to be nalihun tamba bele estraga ai abut sai dodok. hamoos duut ne'ebe moris besik lis mean hodi nunee labele supa nutrisaun husi liis mean.
 ---";
 
+                var contentsList = new List<object>();
+
+                // Memasukkan riwayat chat (Memory) agar AI nyambung dengan chat sebelumnya
+                if (request.History != null && request.History.Count > 0)
+                {
+                    foreach (var h in request.History)
+                    {
+                        var partsList = new List<object>();
+                        if (!string.IsNullOrEmpty(h.ImageBase64))
+                        {
+                            partsList.Add(new { inline_data = new { mime_type = "image/jpeg", data = h.ImageBase64 } });
+                        }
+                        if (!string.IsNullOrEmpty(h.Text))
+                        {
+                            partsList.Add(new { text = h.Text });
+                        }
+
+                        contentsList.Add(new { role = h.Role, parts = partsList.ToArray() });
+                    }
+                }
+                else
+                {
+                    var currentParts = new List<object>();
+                    if (!string.IsNullOrEmpty(request.ImageBase64))
+                    {
+                        currentParts.Add(new { inline_data = new { mime_type = "image/jpeg", data = request.ImageBase64 } });
+                    }
+                    currentParts.Add(new { text = request.Question });
+
+                    contentsList.Add(new { role = "user", parts = currentParts.ToArray() });
+                }
+
                 var payload = new
                 {
-                    contents = new[]
-                    {
-                        new
-                        {
-                            parts = new[]
-                            {
-                                new { text = $"{systemInstruction}\n\nPergunta husi agrikultor: {request.Question}" }
-                            }
-                        }
-                    },
-                    generationConfig = new
-                    {
-                        temperature = 0.1, // Rendah agar tidak mengarang / berhalusinasi kata baru
-                        maxOutputTokens = 450
-                    }
+                    system_instruction = new { parts = new[] { new { text = systemInstruction } } },
+                    contents = contentsList.ToArray(),
+                    generationConfig = new { temperature = 0.1, maxOutputTokens = 500 }
                 };
 
-                // Gunakan model resmi gemini-2.5-flash-lite
-                string apiUrl = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={_geminiApiKey}";
+                string apiUrl = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={_geminiApiKey}";
 
                 var response = await _httpClient.PostAsJsonAsync(apiUrl, payload);
                 string responseBody = await response.Content.ReadAsStringAsync();
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    Console.WriteLine($"[GEMINI ERROR]: {response.StatusCode} - {responseBody}");
-                    return Ok(new { Answer = $"⚠️ Gemini API Error ({(int)response.StatusCode}): {responseBody}" });
+                    return Ok(new { Answer = $"⚠️ Gemini API Error: {responseBody}" });
                 }
 
                 using var doc = JsonDocument.Parse(responseBody);
@@ -169,12 +185,7 @@ Oinsa atu kuda liis mean ho di'ak??
                 
                 if (candidates.GetArrayLength() > 0)
                 {
-                    string answer = candidates[0]
-                        .GetProperty("content")
-                        .GetProperty("parts")[0]
-                        .GetProperty("text")
-                        .GetString() ?? "Deskulpa, la bele hetan resposta.";
-
+                    string answer = candidates[0].GetProperty("content").GetProperty("parts")[0].GetProperty("text").GetString() ?? "Deskulpa, la bele hetan resposta.";
                     return Ok(new { Answer = answer.Trim() });
                 }
 
@@ -197,6 +208,15 @@ Oinsa atu kuda liis mean ho di'ak??
         public double N { get; set; }
         public double P { get; set; }
         public double K { get; set; }
+        public List<ChatHistoryItem>? History { get; set; }
         public string Question { get; set; } = "";
+        public string? ImageBase64 { get; set; }
+    }
+
+    public class ChatHistoryItem
+    {
+        public string Role { get; set; } = "user";
+        public string Text { get; set; } = "";
+        public string? ImageBase64 { get; set; }
     }
 }
