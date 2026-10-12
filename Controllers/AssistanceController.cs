@@ -121,7 +121,7 @@ DADOS SENSOR NO AI-HORIS:
                 };
 
                 // Menggunakan model Gemini terbaru yang mendukung Vision (Analisis Foto) & Chat Cerdas
-                string apiUrl = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={_geminiApiKey}";
+                string apiUrl = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={_geminiApiKey}";
 
                 var response = await _httpClient.PostAsJsonAsync(apiUrl, payload);
                 string responseBody = await response.Content.ReadAsStringAsync();
