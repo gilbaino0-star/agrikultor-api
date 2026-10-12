@@ -190,6 +190,7 @@ Oinsa atu kuda liis mean ho di'ak??
         public double N { get; set; }
         public double P { get; set; }
         public double K { get; set; }
+         public double EC { get; set; }
         public string Question { get; set; } = "";
         public string? ImageBase64 { get; set; }
     }

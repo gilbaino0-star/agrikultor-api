@@ -9,8 +9,9 @@ namespace MyPwaApp.Api.Models
         [LoadColumn(2)] public float K { get; set; }
         [LoadColumn(3)] public float Temperature { get; set; }
         [LoadColumn(4)] public float Humidity { get; set; }
-        [LoadColumn(5)] public float Ph { get; set; }
-        [LoadColumn(6)] public string Label { get; set; } = string.Empty;
+        [LoadColumn(5)] public float Ph { get; set; }       
+        [LoadColumn(6)] public float EC { get; set; }
+        [LoadColumn(7)] public string Label { get; set; } = string.Empty;
     }
 
     public class CropPrediction
